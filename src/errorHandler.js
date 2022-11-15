@@ -1,5 +1,5 @@
 const errorHandler = (err, req, res, next) => {
-    
+    err.errors?.name.ValidationError && (err.status = 400); 
     switch (err.status){
       case 400:
         res.status(400).send({ message: err.message, errorsList: err.errorsList });

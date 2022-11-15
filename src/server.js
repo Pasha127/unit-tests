@@ -1,8 +1,7 @@
 import express from "express"
 import cors from "cors"
-import usersRouter from "./users/index.js"
-import productsRouter from "./products/index.js"
 import errorHandler from "./errorHandler.js"
+import router from "./api/index.js"
 
 const server = express()
 

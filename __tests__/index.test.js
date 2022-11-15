@@ -1,37 +1,39 @@
-import supertest from "supertest"
-import mongoose from "mongoose"
-import dotenv from "dotenv"
-import productModel from "../src/api/productModel.js"
-import server from "../src/server.js"
-dotenv.config() 
-const client = supertest(server)
+import supertest from "supertest";
+import mongoose from "mongoose";
+import dotenv from "dotenv";
+import productModel from "../src/api/productModel.js";
+import server from "../src/server.js";
+dotenv.config();
+const client = supertest(server);
 
 const newProduct = {
   name: "test product",
   description: "lorem ipsum",
   price: 29,
-}
+};
+
+const newName = "modified product";
 
 const notValidProduct = {
   description: "lorem ipsum",
   price: 29,
-}
+};
 
 const specificProduct = {
     name: "specific product",
   description: "This product should be found by ID",
   price: 69
+};
 
-}
 
 const invalidProductId = 12345612345612345612345;
-const validProductId = 123456123456123456123456
+const validProductId = 123456123456123456123456;
 
 beforeAll(async () => {
-  await mongoose.connect(process.env.MONGO_TEST_CONNECTION_URL)
-  const product = new productModel(newProduct)
-  await product.save()
-})
+  await mongoose.connect(process.env.MONGO_TEST_CONNECTION_URL);
+  const product = new productModel(newProduct);
+  await product.save();
+});
 
 
 describe("Test Products APIs", () => {
@@ -57,20 +59,40 @@ describe("Test Products APIs", () => {
         await client.get(`/products/${validProductId}`).expect(404);
     });
     
-    it("Should test that GET /products with a specific ID returns the correct product with a correctly formatted ID", async () => {
+    it("Should test that GET /products/:productId returns the correct product with a correctly formatted ID", async () => {
         const postedProduct = await client.post("/products").send(specificProduct);
         const res = await client.get(`/products/${postedProduct.body._id}`);
         expect(res.body._id).toHaveLength(24);
         expect(res.body._id).toMatch(postedProduct.body._id);
     });
-
     
+    it("Should test that DELETE /products/:productId returns 404 if invalid ID", async () => {
+        await client.delete(`/products/${1234567}`).expect(404);
+    });
+    
+    it("Should test that DELETE /products/:productId returns 204 if ID is valid", async () => {
+        const res = await client.get(`/products`);
+        await client.delete(`/products/${res[0].body._id}`).expect(204);
+    });
+    
+    it("Should test that PUT /products/:productId returns 404 if ID is invalid", async () => {
+        await client.put(`/products/${invalidProductId}`).send({name: newName}).expect(404);
+        
+    });
+    
+    it("Should test that PUT /products/:productId returns modified name string if ID is valid", async () => {
+        const postedProduct = await client.post("/products").send(newProduct);
+        const res = await client.put(`/products/${postedProduct.body._id}`).send({name: newName});
+        expect(postedProduct.body._id).toMatch(res.body._id);
+        expect(res.body.name).toMatch(newName);
+        expect(typeof res.body.name).toBe("string");
+    });
 })
 
 afterAll(async () => {
-  await productModel.deleteMany()
-  await mongoose.connection.close()
-})
+  await productModel.deleteMany();
+  await mongoose.connection.close();
+});
 
 
 
