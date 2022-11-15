@@ -10,7 +10,7 @@ import userModel from "./userModel.js"
 
 const router = express.Router()
 
-router.post("/", async (req, res, next) => {
+router.post("/user", async (req, res, next) => {
   try {
     const newUser = new userModel(req.body)
     const { _id } = await newUser.save()
@@ -20,7 +20,7 @@ router.post("/", async (req, res, next) => {
   }
 })
 
-router.get("/", JWTAuthMiddleware, async (req, res, next) => {
+router.get("/user", JWTAuthMiddleware, async (req, res, next) => {
   try {
     const users = await userModel.find({})
     res.send(users)
@@ -29,7 +29,7 @@ router.get("/", JWTAuthMiddleware, async (req, res, next) => {
   }
 })
 
-router.get("/me", JWTAuthMiddleware, async (req, res, next) => {
+router.get("/user/me", JWTAuthMiddleware, async (req, res, next) => {
   try {
     const user = await userModel.findById(req.user._id)
     if (user) {
@@ -42,7 +42,7 @@ router.get("/me", JWTAuthMiddleware, async (req, res, next) => {
   }
 })
 
-router.put("/me", JWTAuthMiddleware, async (req, res, next) => {
+router.put("/user/me", JWTAuthMiddleware, async (req, res, next) => {
   try {
     const updatedUser = await userModel.findByIdAndUpdate(req.user._id, req.body, {
       new: true,
@@ -54,7 +54,7 @@ router.put("/me", JWTAuthMiddleware, async (req, res, next) => {
   }
 })
 
-router.delete("/me", JWTAuthMiddleware, async (req, res, next) => {
+router.delete("/user/me", JWTAuthMiddleware, async (req, res, next) => {
   try {
     await userModel.findByIdAndDelete(req.user._id)
     res.status(204).send()
@@ -63,7 +63,34 @@ router.delete("/me", JWTAuthMiddleware, async (req, res, next) => {
   }
 })
 
-router.get("/:userId", JWTAuthMiddleware, adminOnlyMiddleware, async (req, res, next) => {
+
+router.post("/user/login", async (req, res, next) => {
+    try {
+        const { email, password } = req.body
+        const user = await userModel.checkCredentials(email, password)
+        if (user) {
+            const { accessToken, refreshToken } = await createTokens(user)
+      res.send({ accessToken, refreshToken })
+    } else {
+        next(createHttpError(401, `Credentials are not ok!`))
+    }
+} catch (error) {
+    next(error)
+}
+})
+
+router.post("/user/refreshTokens", async (req, res, next) => {
+    try {
+        const { currentRefreshToken } = req.body
+        const { accessToken, refreshToken } = await verifyRefreshAndCreateNewTokens(currentRefreshToken)
+        res.send({ accessToken, refreshToken })
+    } catch (error) {
+        
+        next(error)
+    }
+})
+
+router.get("/user/:userId", JWTAuthMiddleware, adminOnlyMiddleware, async (req, res, next) => {
   try {
     const user = await userModel.findById(req.params.userId)
     res.send(user)
@@ -72,7 +99,7 @@ router.get("/:userId", JWTAuthMiddleware, adminOnlyMiddleware, async (req, res, 
   }
 })
 
-router.delete("/:userId", JWTAuthMiddleware, adminOnlyMiddleware, async (req, res, next) => {
+router.delete("/user/:userId", JWTAuthMiddleware, adminOnlyMiddleware, async (req, res, next) => {
   try {
     const user = await userModel.findByIdAndDelete(req.params.userId)
     if (user) {
@@ -84,39 +111,12 @@ router.delete("/:userId", JWTAuthMiddleware, adminOnlyMiddleware, async (req, re
     next(error)
   }
 })
-
-router.post("/login", async (req, res, next) => {
-  try {
-    const { email, password } = req.body
-    const user = await userModel.checkCredentials(email, password)
-    if (user) {
-      const { accessToken, refreshToken } = await createTokens(user)
-      res.send({ accessToken, refreshToken })
-    } else {
-      next(createHttpError(401, `Credentials are not ok!`))
-    }
-  } catch (error) {
-    next(error)
-  }
-})
-
-router.post("/refreshTokens", async (req, res, next) => {
-  try {
-    const { currentRefreshToken } = req.body
-    const { accessToken, refreshToken } = await verifyRefreshAndCreateNewTokens(currentRefreshToken)
-    res.send({ accessToken, refreshToken })
-  } catch (error) {
-
-    next(error)
-  }
-})
-
 //////////////////////// Products ////////////////////////////////
 
 
 router.post("/products/", async (req, res, next) => {
   try {
-    const newProduct = new ProductsModel(req.body)
+    const newProduct = new productModel(req.body)
     const { _id } = await newProduct.save()
     res.status(201).send({ _id })
   } catch (error) {
@@ -126,8 +126,28 @@ router.post("/products/", async (req, res, next) => {
 
 router.get("/products/", async (req, res, next) => {
   try {
-    const products = await ProductsModel.find({})
+    const products = await productModel.find({})
     res.send(products)
+  } catch (error) {
+    next(error)
+  }
+})
+router.get("/products/:productId", async (req, res, next) => {
+  try {
+    const product = await productModel.findById(req.params.productId)
+    if(product){
+        res.status(200).send(product)
+    }else{
+        res.status(404)
+    }
+  } catch (error) {
+    next(error)
+  }
+})
+router.delete("/products/:productId", async (req, res, next) => {
+  try {
+    const product = await productModel.findByIdAndDelete(req.params.productId)
+    res.status(204)
   } catch (error) {
     next(error)
   }
