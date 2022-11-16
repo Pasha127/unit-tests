@@ -1,5 +1,13 @@
 const errorHandler = (err, req, res, next) => {
-    err.errors?.name.ValidationError && (err.status = 400); 
+    /* (err instanceof mongoose.Error.ValidationError) && (err.status = 400); 
+    (err instanceof mongoose.Error.CastError) && (err.status = 400);  */
+    
+    /* if(err instanceof mongoose.Error.ValidationError || err instanceof mongoose.Error.ValidationError){
+        res.status(400).send({ message: err.message, errorsList: err.errorsList });
+        console.log("400 in errorHandler", err.status);
+        return;
+    } */
+
     switch (err.status){
       case 400:
         res.status(400).send({ message: err.message, errorsList: err.errorsList });
